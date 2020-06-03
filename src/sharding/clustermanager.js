@@ -204,6 +204,7 @@ class ClusterManager extends EventEmitter {
 
         master.on('message', (worker, message, handle) => {
             if (message.name) {
+                console.log(message);
                 const clusterID = this.workers.get(worker.id);
 
                 switch (message.name) {
@@ -281,7 +282,10 @@ class ClusterManager extends EventEmitter {
                             });
                         }
                         break;
-
+                    case "broadcastEval":
+                        this.fetchInfo(0, "broadcastEval", [message.id, message.code]);
+                        this.callbacks.set(message.id, { clusterID, allClustersRequired: true });
+                        break;
                     case "fetchUser":
                         this.fetchInfo(0, "fetchUser", message.id);
                         this.callbacks.set(message.id, clusterID);
@@ -297,15 +301,41 @@ class ClusterManager extends EventEmitter {
                     case "fetchMember":
                         this.fetchInfo(0, "fetchMember", [message.guildID, message.memberID]);
                         this.callbacks.set(message.memberID, clusterID);
+                        break;
                     case "fetchReturn":
-                        console.log(message);
                         let callback = this.callbacks.get(message.value.id);
 
-                        let cluster = this.clusters.get(callback);
+                        if (typeof callback == "object") {
+                            if (callback.allClustersRequired) {
+                                if (!callback.responses) callback.responses = [];
+                                callback.responses.push(message.value.output);
 
-                        if (cluster) {
-                            master.workers[cluster.workerID].send({ name: "fetchReturn", id: message.value.id, value: message.value });
-                            this.callbacks.delete(message.value.id);
+                                if (callback.responses.length === this.clusters.size) {
+                                    let cluster = this.clusters.get(callback.clusterID);
+
+                                    if (cluster) {
+                                        master.workers[cluster.workerID].send({
+                                            name: "fetchReturn",
+                                            id: message.value.id,
+                                            value: callback.responses
+                                        });
+                                        this.callbacks.delete(message.value.id);
+                                    }
+                                } else {
+                                    this.callbacks.set(message.value.id, callback);
+                                }
+                            }
+                        } else {
+                            let cluster = this.clusters.get(callback);
+
+                            if (cluster) {
+                                master.workers[cluster.workerID].send({
+                                    name: "fetchReturn",
+                                    id: message.value.id,
+                                    value: message.value
+                                });
+                                this.callbacks.delete(message.value.id);
+                            }
                         }
                         break;
                     case "broadcast":
@@ -421,7 +451,7 @@ class ClusterManager extends EventEmitter {
                 margin: 2
             })
                 .emptyLine()
-                .right(`eris-sharder ${pkg.version}`)
+                .right(`sw-sharder ${pkg.version}`)
                 .emptyLine()
                 .render()
         );

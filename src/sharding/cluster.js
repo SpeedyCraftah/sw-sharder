@@ -63,6 +63,7 @@ class Cluster {
         });
 
         process.on("message", msg => {
+            console.log(msg)
             if (msg.name) {
                 switch (msg.name) {
                     case "connect": {
@@ -99,6 +100,28 @@ class Cluster {
                                 shardsStats: this.shardsStats
                             }
                         });
+
+                        break;
+                    }
+                    case "broadcastEval": {
+                        if (!this.bot) return;
+                        const [id, code] = msg.value;
+
+                        let output;
+
+                        try {
+                            function clientContextEval() {
+                                return eval(code);
+                            }
+
+                            output = clientContextEval.call(this.bot);
+                        } catch(err) {
+                            output = err.toString();
+                        }
+
+                        if (output.toJSON) output = output.toJSON();
+
+                        process.send({ name: "fetchReturn", value: { id, output } });
 
                         break;
                     }
@@ -140,7 +163,7 @@ class Cluster {
                         let [guildID, memberID] = msg.value;
 
                         let guild = this.bot.guilds.cache.get(guildID);
-                        
+
                         if (guild) {
                             let member = guild.members.cache.get(memberID);
 
@@ -157,6 +180,8 @@ class Cluster {
                         break;
                     case "restart":
                         process.exit(1);
+                        break;
+                    default:
                         break;
                 }
             }

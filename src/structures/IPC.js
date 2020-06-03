@@ -12,6 +12,10 @@ class IPC extends EventEmitter {
         });
     }
 
+    generateID() {
+        return Date.now().toString();
+    }
+
     register(event, callback) {
         this.events.set(event, { fn: callback });
     }
