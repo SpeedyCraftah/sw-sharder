@@ -24,6 +24,21 @@ class ShardUtil {
         });
     }
 
+    masterEval(code) {
+        const id = this.ipc.generateID();
+
+        process.send({ name: "masterEval", id, code });
+
+        return new Promise((resolve, reject) => {
+            const callback = (responses) => {
+                this.ipc.removeListener(id, callback);
+                resolve(responses);
+            };
+
+            this.ipc.on(id, callback);
+        });
+    }
+
 }
 
 module.exports = ShardUtil;

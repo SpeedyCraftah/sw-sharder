@@ -204,7 +204,6 @@ class ClusterManager extends EventEmitter {
 
         master.on('message', (worker, message, handle) => {
             if (message.name) {
-                console.log(message);
                 const clusterID = this.workers.get(worker.id);
 
                 switch (message.name) {
@@ -281,6 +280,21 @@ class ClusterManager extends EventEmitter {
                                 clusters: clusters
                             });
                         }
+                        break;
+                    case "masterEval":
+                        let output;
+
+                        try {
+                            output = eval(message.code);
+                        } catch(err) {
+                            output = err.toString();
+                        }
+
+                        master.workers[cluster.workerID].send({
+                            name: "fetchReturn",
+                            id: message.id,
+                            value: output
+                        });
                         break;
                     case "broadcastEval":
                         this.fetchInfo(0, "broadcastEval", [message.id, message.code]);
