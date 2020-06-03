@@ -290,7 +290,7 @@ class ClusterManager extends EventEmitter {
                             output = err.toString();
                         }
 
-                        master.workers[cluster.workerID].send({
+                        master.workers[worker.id].send({
                             name: "fetchReturn",
                             id: message.id,
                             value: output
