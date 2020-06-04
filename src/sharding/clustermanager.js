@@ -30,6 +30,7 @@ class ClusterManager extends EventEmitter {
         this.clusterCount = options.clusters || numCPUs;
         this.clusterTimeout = options.clusterTimeout * 1000 || 5000;
         this.token = token || false;
+        this.nodeArgs = options.nodeArgs || process.execArgv;
         this.clusters = new Map();
         this.workers = new Map();
         this.queue = new Queue();
@@ -191,6 +192,7 @@ class ClusterManager extends EventEmitter {
                 this.sendWebhook("cluster", embed);
 
                 master.setupMaster({
+                    execArgv: this.nodeArgs,
                     silent: false
                 });
 
