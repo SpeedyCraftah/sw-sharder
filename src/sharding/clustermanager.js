@@ -6,6 +6,7 @@ const EventEmitter = require("events");
 const Eris = require("eris");
 const Queue = require("../utils/queue.js");
 const pkg = require("../../package.json")
+const { inspect } = require("util");
 
 /**
  * 
@@ -24,6 +25,7 @@ class ClusterManager extends EventEmitter {
      */
     constructor(token, mainFile, clientFile, options) {
         super();
+        this.logger = logger;
         this.shardCount = options.shards || 0;
         this.firstShardID = options.firstShardID || 0;
         this.lastShardID = options.lastShardID || (this.shardCount - 1);
@@ -121,6 +123,10 @@ class ClusterManager extends EventEmitter {
         }
     }
 
+    logOverride(message) {
+        if (typeof message == 'object') return inspect(message);
+        else return message;
+    }
 
     /**
      * 
@@ -231,6 +237,12 @@ class ClusterManager extends EventEmitter {
 
                         if (this.queue.queue.length > 0) {
                             setTimeout(() => this.queue.executeQueue(), this.clusterTimeout);
+                        }
+
+                        if (!this.queue.queue.length) {
+                            if (this.allClustersReady) break;
+                            this.emit("allClustersReady");
+                            this.allClustersReady = true;
                         }
                         break;
                     case "cluster":

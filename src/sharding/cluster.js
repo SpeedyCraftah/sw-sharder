@@ -63,7 +63,6 @@ class Cluster {
         });
 
         process.on("message", msg => {
-            console.log(msg)
             if (msg.name) {
                 switch (msg.name) {
                     case "connect": {
