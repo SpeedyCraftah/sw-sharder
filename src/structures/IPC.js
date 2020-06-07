@@ -41,6 +41,23 @@ class IPC extends EventEmitter {
         });
     }
 
+    masterDispatch(message = {}, options = {}) {
+        const id = this.generateID();
+        
+        process.send({ name: "masterDispatch", id, message, options });
+
+        if (!options.receptive) return;
+
+        return new Promise((resolve, reject) => {
+            const callback = (response) => {
+                this.removeListener(id, callback);
+                resolve(response);
+            };
+
+            this.on(id, callback);
+        });
+    }
+
     dispatchTo(cluster, message = {}, options = {}) {
         const id = this.generateID();
         

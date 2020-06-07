@@ -378,6 +378,18 @@ class ClusterManager extends EventEmitter {
                             this.callbacks.set(message.id, clusterID);
                         }
                         break;
+                    case "masterDispatch":
+                        const reply = (r) => {
+                            if (!message.options.receptive) return;
+                            master.workers[worker.id].send({
+                                name: "fetchReturn",
+                                id: message.id,
+                                value: r
+                            });
+                        };
+                        
+                        this.emit("message", clusterID, message, reply);
+                    break;
                 }
             }
         });
