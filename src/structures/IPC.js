@@ -24,14 +24,38 @@ class IPC extends EventEmitter {
         this.events.delete(name);
     }
 
-    broadcast(name, message = {}) {
-        message._eventName = name;
-        process.send({ name: "broadcast", msg: message });
+    broadcast(message = {}, options = {}) {
+        const id = this.generateID();
+        
+        process.send({ name: "broadcast", id, message, options });
+
+        if (!options.receptive) return;
+
+        return new Promise((resolve, reject) => {
+            const callback = (responses) => {
+                this.removeListener(id, callback);
+                resolve(responses);
+            };
+
+            this.on(id, callback);
+        });
     }
 
-    sendTo(cluster, name, message = {}) {
-        message._eventName = name;
-        process.send({ name: "send", cluster: cluster, msg: message });
+    dispatchTo(cluster, message = {}, options = {}) {
+        const id = this.generateID();
+        
+        process.send({ name: "dispatchTo", id, cluster, message, options });
+
+        if (!options.receptive) return;
+
+        return new Promise((resolve, reject) => {
+            const callback = (response) => {
+                this.removeListener(id, callback);
+                resolve(response.value);
+            };
+
+            this.on(id, callback);
+        });
     }
 
     async fetchUser(id) {

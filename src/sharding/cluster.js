@@ -179,7 +179,22 @@ class Cluster {
                         break;
                     case "restart":
                         process.exit(1);
+                    case "broadcast": {
+                        const reply = (r) => {
+                            if (!msg.message.options.receptive) return;
+                            process.send({ name: "fetchReturn", value: { id: msg.message.id, output: r } });
+                        };
+                        this.ipc.emit("message", msg.message, reply);
                         break;
+                    }
+                    case "dispatchTo": {
+                        const reply = (r) => {
+                            if (!msg.message.options.receptive) return;
+                            process.send({ name: "fetchReturn", value: { id: msg.message.id, value: r } });
+                        };
+                        this.ipc.emit("message", msg.message, reply);
+                        break;
+                    }
                     default:
                         break;
                 }

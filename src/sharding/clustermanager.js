@@ -359,7 +359,7 @@ class ClusterManager extends EventEmitter {
                             if (cluster) {
                                 master.workers[cluster.workerID].send({
                                     name: "fetchReturn",
-                                    id: message.value.id,
+                                    id: message.id || message.value.id,
                                     value: message.value
                                 });
                                 this.callbacks.delete(message.value.id);
@@ -367,10 +367,16 @@ class ClusterManager extends EventEmitter {
                         }
                         break;
                     case "broadcast":
-                        this.broadcast(0, message.msg);
+                        this.broadcast(0, message);
+                        if (message.options.receptive) {
+                            this.callbacks.set(message.id, { clusterID, allClustersRequired: true });
+                        }
                         break;
-                    case "send":
-                        this.sendTo(message.cluster, message.msg)
+                    case "dispatchTo":
+                        this.sendTo(message.cluster, message);
+                        if (message.options.receptive) {
+                            this.callbacks.set(message.id, clusterID);
+                        }
                         break;
                 }
             }
@@ -529,28 +535,18 @@ class ClusterManager extends EventEmitter {
     }
 
     async calculateShards() {
-        let shards = this.shardCount;
-
         if (this.shardCount !== 0) return Promise.resolve(this.shardCount);
 
-        let result = await this.eris.getBotGateway();
-        shards = result.shards;
+        const result = await this.eris.getBotGateway();
+        this.shardCount = result.shards;
 
-        if (shards === 1) {
-            return Promise.resolve(shards);
-        } else {
-            let guildCount = shards * 1000;
-            let guildsPerShard = this.guildsPerShard;
-            let shardsDecimal = guildCount / guildsPerShard;
-            let finalShards = Math.ceil(shardsDecimal);
-            return Promise.resolve(finalShards);
-        }
+        return Promise.resolve(result.shards);
     }
 
     fetchInfo(start, type, value) {
         let cluster = this.clusters.get(start);
         if (cluster) {
-            master.workers[cluster.workerID].send({ name: type, value: value });
+            master.workers[cluster.workerID].send({ name: type, value });
             this.fetchInfo(start + 1, type, value);
         }
     }
@@ -558,7 +554,7 @@ class ClusterManager extends EventEmitter {
     broadcast(start, message) {
         let cluster = this.clusters.get(start);
         if (cluster) {
-            master.workers[cluster.workerID].send(message);
+            master.workers[cluster.workerID].send({ name: "broadcast", message });
             this.broadcast(start + 1, message);
         }
     }
@@ -566,7 +562,7 @@ class ClusterManager extends EventEmitter {
     sendTo(cluster, message) {
         let worker = master.workers[this.clusters.get(cluster).workerID];
         if (worker) {
-            worker.send(message);
+            worker.send({ name: "dispatchTo", message });
         }
     }
 }
